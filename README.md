@@ -18,7 +18,7 @@ A cardboard door frame with a push button simulates a real magnetic door sensor.
 |---|---|---|
 | Push Button | Pin 2 | Door sensor (press = open, release = closed) |
 | Red LED | Pin 13 | Door status indicator |
-| Yellow LED | Pin 7 | Alert indicator |
+| Yellow LED | Pin 12 | Alert indicator |
 | Passive Buzzer | Pin 8 | Audio feedback |
 | 220Ω Resistor | — | Current limiter for red LED |
 
