@@ -108,7 +108,3 @@ Watch everything react — LEDs, buzzer, and dashboard all update instantly.
 ## Simulation Mode
 
 To run without Arduino hardware, set `HARDWARE_MODE = false` in `DoorMonitorSystem.java`. The system uses `MagneticSensor` to generate random door events automatically. The dashboard still works in full.
-
----
-
-*Built as an OOP course project — Java + Arduino + WebSocket from scratch.*
