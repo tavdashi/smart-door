@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Door Monitoring System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg-base:     #080810;
+    --bg-card:     #0e0e1a;
+    --bg-card2:    #12121f;
+    --bg-border:   #1e1e32;
+    --purple-1:    #7c3aed;
+    --purple-2:    #9333ea;
+    --purple-3:    #a855f7;
+    --purple-glow: rgba(124,58,237,0.35);
+    --violet-soft: rgba(168,85,247,0.12);
+    --cyan:        #22d3ee;
+    --green:       #4ade80;
+    --amber:       #fbbf24;
+    --red:         #f87171;
+    --text-1:      #f1f0ff;
+    --text-2:      #a09ec0;
+    --text-3:      #5a5878;
+    --mono:        'JetBrains Mono', monospace;
+    --sans:        'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-base);
+    font-family: var(--sans);
+    color: var(--text-1);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND MESH ─────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(124,58,237,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 100%,  rgba(147,51,234,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 50% 50%,   rgba(8,8,16,0) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* grid texture */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(var(--bg-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 28px 60px; }
+
+  /* ── TOP NAV ──────────────────────────────────────── */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0 28px;
+    border-bottom: 1px solid var(--bg-border);
+    margin-bottom: 32px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .nav-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--purple-1), var(--purple-3));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 20px var(--purple-glow);
+  }
+  .nav-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .nav-sub   { font-size: 11px; color: var(--text-3); font-family: var(--mono); margin-top: 1px; }
+
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-time {
+    font-family: var(--mono); font-size: 13px; color: var(--text-2);
+    background: var(--bg-card); border: 1px solid var(--bg-border);
+    padding: 6px 14px; border-radius: 8px;
+  }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25);
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; color: var(--amber);
+    font-family: var(--mono);
+    transition: all 0.4s ease;
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 8px var(--amber);
+    animation: pulse-green 2s infinite;
+    transition: all 0.4s ease;
+  }
+
+  /* ── GRID LAYOUT ──────────────────────────────────── */
+  .grid-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 20px;
+  }
+
+  /* ── CARD BASE ────────────────────────────────────── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-border);
+    border-radius: 18px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .card:hover {
+    border-color: rgba(124,58,237,0.4);
+    box-shadow: 0 0 30px rgba(124,58,237,0.1);
+  }
+  .card-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-3);
+    font-family: var(--mono); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-label::before {
+    content: '';
+    width: 3px; height: 12px; border-radius: 2px;
+    background: var(--purple-3);
+  }
+
+  /* ── HERO DOOR CARD ───────────────────────────────── */
+  .card-door {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    padding: 32px;
+    animation: fadeUp 0.5s 0.1s ease both;
+  }
+  .card-door::before {
+    content: '';
+    position: absolute; top: -60px; right: -60px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: var(--purple-glow);
+    filter: blur(60px);
+    pointer-events: none;
+  }
+
+  .door-hero {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 32px;
+  }
+  .door-visual {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .door-frame {
+    width: 100px; height: 130px;
+    border: 3px solid var(--bg-border);
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: var(--bg-card2);
+  }
+  .door-panel {
+    position: absolute;
+    top: 4px; left: 4px; bottom: 4px;
+    width: calc(100% - 8px);
+    background: linear-gradient(160deg, rgba(124,58,237,0.25), rgba(124,58,237,0.05));
+    border-radius: 5px 5px 0 0;
+    border: 1px solid rgba(124,58,237,0.2);
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: left center;
+  }
+  .door-knob {
+    position: absolute; right: 10px; top: 50%;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--purple-3);
+    box-shadow: 0 0 8px var(--purple-glow);
+    transform: translateY(-50%);
+  }
+  .door-frame.open .door-panel { transform: perspective(400px) rotateY(-55deg); }
+  .door-frame.open { border-color: var(--purple-3); box-shadow: 0 0 24px var(--purple-glow); }
+
+  .door-status-text {
+    font-size: 11px; font-family: var(--mono);
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  .door-info { flex: 1; }
+  .door-state-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 20px; border-radius: 50px;
+    font-size: 22px; font-weight: 800; letter-spacing: -0.03em;
+    margin-bottom: 16px;
+    transition: all 0.4s ease;
+  }
+  .door-state-badge.open {
+    background: rgba(168,85,247,0.15);
+    border: 1.5px solid rgba(168,85,247,0.4);
+    color: var(--purple-3);
+  }
+  .door-state-badge.closed {
+    background: rgba(74,222,128,0.1);
+    border: 1.5px solid rgba(74,222,128,0.3);
+    color: var(--green);
+  }
+  .state-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .open   .state-dot { background: var(--purple-3); box-shadow: 0 0 10px var(--purple-3); animation: pulse-purple 1.5s infinite; }
+  .closed .state-dot { background: var(--green);    box-shadow: 0 0 10px var(--green); }
+
+  .door-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .meta-chip {
+    background: var(--bg-card2); border: 1px solid var(--bg-border);
+    border-radius: 8px; padding: 8px 14px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-2);
+  }
+  .meta-chip span { color: var(--text-1); font-weight: 600; }
+
+  .open-timer {
+    font-family: var(--mono); font-size: 13px; color: var(--amber);
+    background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2);
+    padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .open-timer.visible { opacity: 1; }
+
+  /* ── STATS ROW ────────────────────────────────────── */
+  .card-stat {
+    grid-row: 1;
+    animation: fadeUp 0.5s 0.2s ease both;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .stat-big {
+    font-size: 48px; font-weight: 800; letter-spacing: -0.04em;
+    background: linear-gradient(135deg, var(--purple-3), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin: 12px 0 6px;
+  }
+  .stat-sub { font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+  .stat-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .mini-stat {
+    background: var(--bg-card2); border: 1px solid var(--bg-border);
+    border-radius: 10px; padding: 12px;
+  }
+  .mini-stat-val { font-size: 22px; font-weight: 700; }
+  .mini-stat-lbl { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+  .col-open   { color: var(--purple-3); }
+  .col-close  { color: var(--cyan); }
+  .col-alert  { color: var(--red); }
+  .col-lock   { color: var(--amber); }
+
+  /* ── LOCK CARD ────────────────────────────────────── */
+  .card-lock {
+    grid-column: 1;
+    animation: fadeUp 0.5s 0.3s ease both;
+  }
+  .lock-visual {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 0 16px;
+    gap: 12px;
+  }
+  .lock-icon-wrap {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    transition: all 0.4s ease;
+    position: relative;
+  }
+  .lock-icon-wrap.locked {
+    background: rgba(251,191,36,0.12);
+    border: 2px solid rgba(251,191,36,0.35);
+    box-shadow: 0 0 24px rgba(251,191,36,0.2);
+  }
+  .lock-icon-wrap.unlocked {
+    background: rgba(74,222,128,0.1);
+    border: 2px solid rgba(74,222,128,0.3);
+    box-shadow: 0 0 24px rgba(74,222,128,0.15);
+  }
+  .lock-state-text {
+    font-size: 16px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .lock-state-text.locked   { color: var(--amber); }
+  .lock-state-text.unlocked { color: var(--green); }
+
+  .lock-btn-row { display: flex; gap: 10px; margin-top: 8px; }
+  .btn {
+    flex: 1; padding: 11px 0; border-radius: 10px;
+    border: none; cursor: pointer; font-family: var(--sans);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; transition: all 0.2s ease;
+  }
+  .btn-lock {
+    background: rgba(251,191,36,0.15); color: var(--amber);
+    border: 1px solid rgba(251,191,36,0.3);
+  }
+  .btn-lock:hover { background: rgba(251,191,36,0.25); box-shadow: 0 0 16px rgba(251,191,36,0.2); }
+  .btn-unlock {
+    background: rgba(74,222,128,0.1); color: var(--green);
+    border: 1px solid rgba(74,222,128,0.25);
+  }
+  .btn-unlock:hover { background: rgba(74,222,128,0.2); box-shadow: 0 0 16px rgba(74,222,128,0.15); }
+
+  .auto-lock-bar {
+    margin-top: 14px;
+  }
+  .auto-lock-lbl {
+    display: flex; justify-content: space-between;
+    font-size: 10px; font-family: var(--mono); color: var(--text-3); margin-bottom: 6px;
+  }
+  .progress-track {
+    width: 100%; height: 4px; background: var(--bg-border); border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--purple-1), var(--purple-3));
+    transition: width 1s linear;
+    width: 0%;
+  }
+
+  /* ── ACTIVITY CHART ───────────────────────────────── */
+  .card-chart {
+    grid-column: 2 / 4;
+    animation: fadeUp 0.5s 0.35s ease both;
+  }
+  .chart-area {
+    display: flex; align-items: flex-end; gap: 6px;
+    height: 90px; margin-top: 8px;
+  }
+  .bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 3px; }
+  .bar {
+    width: 100%; border-radius: 4px 4px 0 0;
+    transition: height 0.5s cubic-bezier(0.34,1.56,0.64,1), background 0.3s;
+    min-height: 4px;
+  }
+  .bar.open-bar    { background: linear-gradient(180deg, var(--purple-3), var(--purple-1)); }
+  .bar.close-bar   { background: linear-gradient(180deg, var(--cyan), rgba(34,211,238,0.3)); }
+  .bar-lbl { font-size: 9px; color: var(--text-3); font-family: var(--mono); }
+  .chart-legend {
+    display: flex; gap: 16px; margin-top: 12px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); font-family: var(--mono); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* ── ALERT FEED ───────────────────────────────────── */
+  .card-alerts {
+    grid-column: 1 / 3;
+    animation: fadeUp 0.5s 0.4s ease both;
+  }
+  .alert-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+  .alert-list::-webkit-scrollbar { width: 4px; }
+  .alert-list::-webkit-scrollbar-track { background: var(--bg-card2); }
+  .alert-list::-webkit-scrollbar-thumb { background: var(--bg-border); border-radius: 2px; }
+
+  .alert-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; border-radius: 10px;
+    border-left: 3px solid transparent;
+    background: var(--bg-card2);
+    animation: slideIn 0.35s ease both;
+    font-family: var(--mono);
+  }
+  .alert-item.critical { border-color: var(--red);   background: rgba(248,113,113,0.06); }
+  .alert-item.high     { border-color: var(--amber);  background: rgba(251,191,36,0.06); }
+  .alert-item.medium   { border-color: var(--purple-3); background: rgba(168,85,247,0.06); }
+  .alert-item.info     { border-color: var(--cyan);   background: rgba(34,211,238,0.05); }
+
+  .alert-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 3px 8px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .critical .alert-badge { background: rgba(248,113,113,0.2); color: var(--red); }
+  .high     .alert-badge { background: rgba(251,191,36,0.2);  color: var(--amber); }
+  .medium   .alert-badge { background: rgba(168,85,247,0.2);  color: var(--purple-3); }
+  .info     .alert-badge { background: rgba(34,211,238,0.15); color: var(--cyan); }
+
+  .alert-body { flex: 1; }
+  .alert-msg  { font-size: 12px; color: var(--text-1); font-weight: 500; }
+  .alert-time { font-size: 10px; color: var(--text-3); margin-top: 3px; }
+
+  .no-alerts {
+    text-align: center; padding: 32px;
+    font-family: var(--mono); font-size: 12px; color: var(--text-3);
+  }
+
+  /* ── EVENT LOG ────────────────────────────────────── */
+  .card-log {
+    grid-column: 3;
+    grid-row: 3 / 5;
+    animation: fadeUp 0.5s 0.45s ease both;
+  }
+  .log-list {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 340px; overflow-y: auto;
+  }
+  .log-list::-webkit-scrollbar { width: 3px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: var(--bg-border); }
+
+  .log-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; border-radius: 8px;
+    transition: background 0.2s;
+    animation: slideIn 0.3s ease both;
+  }
+  .log-item:hover { background: var(--bg-card2); }
+  .log-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+    padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+    flex-shrink: 0; font-family: var(--mono); margin-top: 1px;
+  }
+  .tag-open    { background: rgba(168,85,247,0.2); color: var(--purple-3); }
+  .tag-close   { background: rgba(34,211,238,0.15); color: var(--cyan); }
+  .tag-locked  { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .tag-unlock  { background: rgba(74,222,128,0.12); color: var(--green); }
+  .tag-alert   { background: rgba(248,113,113,0.15); color: var(--red); }
+  .tag-system  { background: rgba(255,255,255,0.06); color: var(--text-3); }
+
+  .log-body { flex: 1; min-width: 0; }
+  .log-desc { font-size: 11px; color: var(--text-2); font-family: var(--mono);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-time { font-size: 9px; color: var(--text-3); margin-top: 2px; font-family: var(--mono); }
+
+  /* ── SENSOR INFO CARD ─────────────────────────────── */
+  .card-sensor {
+    grid-column: 1;
+    animation: fadeUp 0.5s 0.5s ease both;
+  }
+  .sensor-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--bg-border);
+    font-size: 12px;
+  }
+  .sensor-row:last-child { border-bottom: none; }
+  .sensor-key { color: var(--text-3); font-family: var(--mono); font-size: 11px; }
+  .sensor-val { color: var(--text-1); font-family: var(--mono); font-size: 11px; font-weight: 600; }
+  .online-badge {
+    display: flex; align-items: center; gap: 5px;
+    color: var(--green); font-family: var(--mono); font-size: 11px;
+  }
+  .online-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse-green 2s infinite; box-shadow: 0 0 6px var(--green); }
+
+  /* ── UPTIME RING ──────────────────────────────────── */
+  .card-uptime {
+    grid-column: 2;
+    animation: fadeUp 0.5s 0.55s ease both;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+  }
+  .ring-wrap { position: relative; width: 110px; height: 110px; margin: 10px auto; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg    { fill: none; stroke: var(--bg-border); stroke-width: 8; }
+  .ring-fill  { fill: none; stroke-width: 8; stroke-linecap: round;
+    stroke: url(#ringGrad);
+    stroke-dasharray: 283;
+    stroke-dashoffset: 28;
+    transition: stroke-dashoffset 1s ease; }
+  .ring-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .ring-pct  { font-size: 22px; font-weight: 800; color: var(--text-1); }
+  .ring-sub  { font-size: 9px; color: var(--text-3); font-family: var(--mono); }
+  .uptime-lbl { font-size: 11px; color: var(--text-3); font-family: var(--mono); margin-top: 4px; }
+
+  /* ── ANIMATIONS ───────────────────────────────────── */
+  @keyframes fadeDown  { from { opacity:0; transform: translateY(-16px); } to { opacity:1; transform: none; } }
+  @keyframes fadeUp    { from { opacity:0; transform: translateY(20px); }  to { opacity:1; transform: none; } }
+  @keyframes slideIn   { from { opacity:0; transform: translateX(-10px); } to { opacity:1; transform: none; } }
+  @keyframes pulse-green  { 0%,100%{ box-shadow:0 0 6px var(--green); }  50%{ box-shadow:0 0 14px var(--green); } }
+  @keyframes pulse-purple { 0%,100%{ box-shadow:0 0 8px var(--purple-3); } 50%{ box-shadow:0 0 20px var(--purple-3); } }
+  @keyframes blink { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="nav-icon">🚪</div>
+      <div>
+        <div class="nav-title">Smart Door Monitoring System</div>
+        <div class="nav-sub">IoT LIVE · JAVA + ARDUINO · v2.0</div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="nav-time" id="navTime">--:--:--</div>
+      <div class="status-pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">CONNECTING...</span></div>
+    </div>
+  </nav>
+
+  <!-- GRID -->
+  <div class="grid-main">
+
+    <!-- HERO DOOR CARD -->
+    <div class="card card-door">
+      <div class="card-label">Door Status — Front Door</div>
+      <div class="door-hero">
+        <div class="door-visual">
+          <div class="door-frame" id="doorFrame">
+            <div class="door-panel">
+              <div class="door-knob"></div>
+            </div>
+          </div>
+          <div class="door-status-text" id="doorVisLabel">CLOSED</div>
+        </div>
+        <div class="door-info">
+          <div class="door-state-badge closed" id="doorBadge">
+            <div class="state-dot"></div>
+            <span id="doorStateText">DOOR CLOSED</span>
+          </div>
+          <div class="door-meta">
+            <div class="meta-chip">SENSOR <span>SENS-001</span></div>
+            <div class="meta-chip">LOCATION <span>Front Door</span></div>
+            <div class="meta-chip">POLL <span>4s</span></div>
+            <div class="meta-chip">LAST EVENT <span id="lastEventTime">—</span></div>
+          </div>
+          <div class="open-timer" id="openTimer">
+            ⏱ Door open for <strong id="openSecs">0</strong>s
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS CARD -->
+    <div class="card card-stat">
+      <div class="card-label">Session Stats</div>
+      <div class="stat-big" id="totalEvents">0</div>
+      <div class="stat-sub">TOTAL EVENTS LOGGED</div>
+      <div class="stat-mini-grid">
+        <div class="mini-stat">
+          <div class="mini-stat-val col-open"  id="openCount">0</div>
+          <div class="mini-stat-lbl">OPEN</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val col-close" id="closeCount">0</div>
+          <div class="mini-stat-lbl">CLOSE</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val col-alert" id="alertCount">0</div>
+          <div class="mini-stat-lbl">ALERTS</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val col-lock"  id="lockCount">0</div>
+          <div class="mini-stat-lbl">LOCKS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOCK CARD -->
+    <div class="card card-lock">
+      <div class="card-label">Lock Control — LOCK-001</div>
+      <div class="lock-visual">
+        <div class="lock-icon-wrap locked" id="lockIcon">🔒</div>
+        <div class="lock-state-text locked" id="lockStateText">LOCKED</div>
+      </div>
+      <div class="lock-btn-row">
+        <button class="btn btn-lock"   onclick="manualLock()">Lock</button>
+        <button class="btn btn-unlock" onclick="manualUnlock()">Unlock</button>
+      </div>
+      <div class="auto-lock-bar" id="autoLockBar" style="display:none">
+        <div class="auto-lock-lbl">
+          <span>Auto-lock in</span>
+          <span id="autoLockCountdown">12s</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="autoLockProgress"></div></div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY CHART -->
+    <div class="card card-chart">
+      <div class="card-label">Activity — Last 10 Polls</div>
+      <div class="chart-area" id="chartArea"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple-3)"></div>Door Opens</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div>Door Closes</div>
+      </div>
+    </div>
+
+    <!-- ALERT FEED -->
+    <div class="card card-alerts">
+      <div class="card-label">Alert Feed</div>
+      <div class="alert-list" id="alertFeed">
+        <div class="no-alerts">No alerts yet — system monitoring...</div>
+      </div>
+    </div>
+
+    <!-- SENSOR INFO -->
+    <div class="card card-sensor">
+      <div class="card-label">Device Info</div>
+      <div class="sensor-row">
+        <span class="sensor-key">Device ID</span>
+        <span class="sensor-val">SENS-001</span>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-key">Type</span>
+        <span class="sensor-val">Magnetic Reed</span>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-key">Protocol</span>
+        <span class="sensor-val">GPIO-Digital</span>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-key">Status</span>
+        <div class="online-badge"><span class="dot"></span>Online</div>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-key">Location</span>
+        <span class="sensor-val">Front Door</span>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-key">Uptime</span>
+        <span class="sensor-val" id="uptimeVal">0s</span>
+      </div>
+    </div>
+
+    <!-- UPTIME RING -->
+    <div class="card card-uptime">
+      <div class="card-label">System Health</div>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100" width="110" height="110">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#7c3aed"/>
+              <stop offset="100%" stop-color="#a855f7"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg"   cx="50" cy="50" r="45"/>
+          <circle class="ring-fill" cx="50" cy="50" r="45" id="ringFill"/>
+        </svg>
+        <div class="ring-label">
+          <div class="ring-pct" id="healthPct">90%</div>
+          <div class="ring-sub">HEALTH</div>
+        </div>
+      </div>
+      <div class="uptime-lbl">Sensor Uptime</div>
+    </div>
+
+    <!-- EVENT LOG -->
+    <div class="card card-log">
+      <div class="card-label">Event Log</div>
+      <div class="log-list" id="eventLog"></div>
+    </div>
+
+  </div><!-- /grid -->
+</div><!-- /app -->
+
+<script>
+// ── STATE ────────────────────────────────────────────
+const state = {
+  isDoorOpen:   false,
+  isLocked:     true,
+  openSince:    null,
+  events:       [],
+  alerts:       [],
+  openCount:    0,
+  closeCount:   0,
+  alertCount:   0,
+  lockCount:    0,
+  startTime:    Date.now(),
+  chartData:    Array(10).fill({ open:0, close:0 }),
+  autoLockTimer:     null,
+  autoLockInterval:  null,
+  autoLockRemaining: 0,
+  openAlertFired:    { medium: false, high: false, critical: false },
+  openTimerInterval: null,
+};
+
+// ── HELPERS ──────────────────────────────────────────
+function now() {
+  return new Date().toLocaleTimeString('en-GB', { hour12: false });
+}
+function nowFull() {
+  return new Date().toLocaleString('en-GB', { hour12: false }).replace(',', '');
+}
+
+// ── CLOCK ────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('navTime').textContent = now();
+  const upSec = Math.floor((Date.now() - state.startTime) / 1000);
+  document.getElementById('uptimeVal').textContent =
+    upSec < 60 ? upSec + 's' : Math.floor(upSec/60) + 'm ' + (upSec%60) + 's';
+}, 1000);
+
+// ── DOOR OPEN TIMER ───────────────────────────────────
+function startOpenTimer() {
+  state.openSince = Date.now();
+  state.openTimerInterval = setInterval(() => {
+    const secs = Math.floor((Date.now() - state.openSince) / 1000);
+    document.getElementById('openSecs').textContent = secs;
+    const timer = document.getElementById('openTimer');
+    timer.classList.add('visible');
+    checkAlerts(secs);
+  }, 1000);
+}
+function stopOpenTimer() {
+  clearInterval(state.openTimerInterval);
+  document.getElementById('openTimer').classList.remove('visible');
+  state.openAlertFired = { medium: false, high: false, critical: false };
+}
+
+// ── ALERT THRESHOLDS ─────────────────────────────────
+function checkAlerts(secs) {
+  if (secs >= 35 && !state.openAlertFired.critical) {
+    state.openAlertFired.critical = true;
+    pushAlert('critical', '🚨 CRITICAL: Door Open Too Long', `Door has been open for ${secs}s — possible intrusion!`);
+  } else if (secs >= 20 && !state.openAlertFired.high) {
+    state.openAlertFired.high = true;
+    pushAlert('high', '⚠️ HIGH: Door Open Too Long', `Door has been open for ${secs}s — immediate attention required.`);
+  } else if (secs >= 10 && !state.openAlertFired.medium) {
+    state.openAlertFired.medium = true;
+    pushAlert('medium', '⚡ MEDIUM: Door Open Too Long', `Door has been open for ${secs}s — please check.`);
+  }
+}
+
+// ── PUSH ALERT ────────────────────────────────────────
+function pushAlert(level, msg, detail) {
+  state.alertCount++;
+  state.alerts.unshift({ level, msg, detail, time: nowFull() });
+  pushEvent('alert', msg.replace(/^[^ ]+ /, ''));
+  renderAlerts();
+  updateStats();
+}
+
+// ── PUSH EVENT ────────────────────────────────────────
+function pushEvent(type, desc) {
+  state.events.unshift({ type, desc, time: nowFull() });
+  if (state.events.length > 60) state.events.pop();
+  document.getElementById('lastEventTime').textContent = now();
+  renderLog();
+  updateStats();
+}
+
+// ── DOOR OPEN ─────────────────────────────────────────
+function doorOpen() {
+  if (state.isDoorOpen) return;
+  state.isDoorOpen = true;
+  state.openCount++;
+
+  // Cancel any auto-lock in progress
+  cancelAutoLock();
+
+  // Unlock if locked
+  if (state.isLocked) {
+    if (state.isDoorOpen) pushAlert('medium', '⚡ ALERT: Unlocked While Door Open', 'Unlock command received while door is already open.');
+    setLockState(false, false);
+  }
+
+  // UI
+  document.getElementById('doorFrame').classList.add('open');
+  document.getElementById('doorVisLabel').textContent = 'OPEN';
+  const badge = document.getElementById('doorBadge');
+  badge.className = 'door-state-badge open';
+  document.getElementById('doorStateText').textContent = 'DOOR OPEN';
+
+  pushEvent('open', 'Door Opened — CLOSED → OPEN');
+  startOpenTimer();
+  updateChartBar(1, 0);
+  updateStats();
+}
+
+// ── DOOR CLOSE ────────────────────────────────────────
+function doorClose() {
+  if (!state.isDoorOpen) return;
+  const secs = state.openSince ? Math.floor((Date.now() - state.openSince)/1000) : 0;
+  state.isDoorOpen = false;
+  state.closeCount++;
+
+  stopOpenTimer();
+
+  // UI
+  document.getElementById('doorFrame').classList.remove('open');
+  document.getElementById('doorVisLabel').textContent = 'CLOSED';
+  const badge = document.getElementById('doorBadge');
+  badge.className = 'door-state-badge closed';
+  document.getElementById('doorStateText').textContent = 'DOOR CLOSED';
+
+  pushEvent('close', `Door Closed — was open for ${secs}s`);
+  scheduleAutoLock();
+  updateChartBar(0, 1);
+  updateStats();
+}
+
+// ── SET LOCK STATE ────────────────────────────────────
+function setLockState(locked, logEvent=true) {
+  state.isLocked = locked;
+  const icon = document.getElementById('lockIcon');
+  const txt  = document.getElementById('lockStateText');
+  if (locked) {
+    icon.className = 'lock-icon-wrap locked';
+    icon.textContent = '🔒';
+    txt.className  = 'lock-state-text locked';
+    txt.textContent = 'LOCKED';
+    if (logEvent) { state.lockCount++; pushEvent('locked', 'Door Locked — deadbolt engaged'); updateStats(); }
+  } else {
+    icon.className = 'lock-icon-wrap unlocked';
+    icon.textContent = '🔓';
+    txt.className  = 'lock-state-text unlocked';
+    txt.textContent = 'UNLOCKED';
+    if (logEvent) { pushEvent('unlock', 'Door Unlocked — deadbolt retracted'); updateStats(); }
+  }
+}
+
+// ── MANUAL BUTTONS ────────────────────────────────────
+function manualLock()   { cancelAutoLock(); setLockState(true);  }
+function manualUnlock() {
+  if (state.isDoorOpen) {
+    pushAlert('medium', '⚡ ALERT: Unlock While Open', 'Manual unlock attempted while door is open.');
+  }
+  setLockState(false);
+}
+
+// ── AUTO-LOCK ─────────────────────────────────────────
+const AUTO_LOCK_SECS = 12;
+function scheduleAutoLock() {
+  cancelAutoLock();
+  state.autoLockRemaining = AUTO_LOCK_SECS;
+  const bar = document.getElementById('autoLockBar');
+  bar.style.display = 'block';
+
+  state.autoLockInterval = setInterval(() => {
+    state.autoLockRemaining--;
+    const pct = ((AUTO_LOCK_SECS - state.autoLockRemaining) / AUTO_LOCK_SECS) * 100;
+    document.getElementById('autoLockProgress').style.width = pct + '%';
+    document.getElementById('autoLockCountdown').textContent = state.autoLockRemaining + 's';
+    if (state.autoLockRemaining <= 0) {
+      cancelAutoLock();
+      if (!state.isDoorOpen) setLockState(true);
+    }
+  }, 1000);
+}
+function cancelAutoLock() {
+  clearInterval(state.autoLockInterval);
+  document.getElementById('autoLockBar').style.display = 'none';
+  document.getElementById('autoLockProgress').style.width = '0%';
+}
+
+// ── CHART ─────────────────────────────────────────────
+function updateChartBar(opens, closes) {
+  state.chartData.shift();
+  state.chartData.push({ open: opens, close: closes });
+  renderChart();
+}
+function renderChart() {
+  const area = document.getElementById('chartArea');
+  const maxVal = Math.max(1, ...state.chartData.map(d => d.open + d.close));
+  const height = 84;
+  area.innerHTML = state.chartData.map((d, i) => {
+    const oh = d.open  ? Math.max(8, (d.open  / maxVal) * height * 0.6) : 0;
+    const ch = d.close ? Math.max(8, (d.close / maxVal) * height * 0.6) : 0;
+    return `<div class="bar-group">
+      <div style="display:flex;align-items:flex-end;gap:2px;flex:1;width:100%">
+        <div class="bar open-bar"  style="height:${oh}px;flex:1"></div>
+        <div class="bar close-bar" style="height:${ch}px;flex:1"></div>
+      </div>
+      <div class="bar-lbl">${i + 1}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── STATS ──────────────────────────────────────────────
+function updateStats() {
+  const total = state.events.length;
+  document.getElementById('totalEvents').textContent = total;
+  document.getElementById('openCount').textContent   = state.openCount;
+  document.getElementById('closeCount').textContent  = state.closeCount;
+  document.getElementById('alertCount').textContent  = state.alertCount;
+  document.getElementById('lockCount').textContent   = state.lockCount;
+
+  // health ring — decreases 2% per alert, min 60%
+  const health = Math.max(60, 100 - state.alertCount * 2);
+  document.getElementById('healthPct').textContent = health + '%';
+  const circumference = 283;
+  const offset = circumference - (health / 100) * circumference;
+  document.getElementById('ringFill').style.strokeDashoffset = offset;
+}
+
+// ── RENDER ALERTS ─────────────────────────────────────
+function renderAlerts() {
+  const feed = document.getElementById('alertFeed');
+  if (!state.alerts.length) {
+    feed.innerHTML = '<div class="no-alerts">No alerts yet — system monitoring...</div>';
+    return;
+  }
+  feed.innerHTML = state.alerts.slice(0, 20).map(a => `
+    <div class="alert-item ${a.level}">
+      <span class="alert-badge">${a.level.toUpperCase()}</span>
+      <div class="alert-body">
+        <div class="alert-msg">${a.msg}</div>
+        <div class="alert-time">${a.detail} · ${a.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── RENDER LOG ────────────────────────────────────────
+const TAG_MAP = {
+  open:   'tag-open',   close:  'tag-close',
+  locked: 'tag-locked', unlock: 'tag-unlock',
+  alert:  'tag-alert',  system: 'tag-system',
+};
+function renderLog() {
+  const log = document.getElementById('eventLog');
+  log.innerHTML = state.events.slice(0, 50).map(e => `
+    <div class="log-item">
+      <span class="log-tag ${TAG_MAP[e.type] || 'tag-system'}">${e.type.toUpperCase()}</span>
+      <div class="log-body">
+        <div class="log-desc">${e.desc}</div>
+        <div class="log-time">${e.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── WEBSOCKET CONNECTION TO JAVA ──────────────────────
+// Connects to DashboardServer.java running on localhost:8887
+// Falls back to simulation mode if Java app is not running
+
+const WS_URL = 'ws://localhost:8887';
+let wsConnected = false;
+let ws = null;
+
+function setConnectionStatus(connected) {
+  wsConnected = connected;
+  const pill = document.getElementById('statusPill');
+  const dot  = document.getElementById('statusDot');
+  const txt  = document.getElementById('statusText');
+  if (connected) {
+    pill.style.background = 'rgba(74,222,128,0.1)';
+    pill.style.border = '1px solid rgba(74,222,128,0.25)';
+    pill.style.color = 'var(--green)';
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow = '0 0 8px var(--green)';
+    txt.textContent = 'LIVE — Arduino Connected';
+  } else {
+    pill.style.background = 'rgba(251,191,36,0.1)';
+    pill.style.border = '1px solid rgba(251,191,36,0.25)';
+    pill.style.color = 'var(--amber)';
+    dot.style.background = 'var(--amber)';
+    dot.style.boxShadow = '0 0 8px var(--amber)';
+    txt.textContent = 'SIMULATION MODE';
+  }
+}
+
+function connectWebSocket() {
+  try {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      setConnectionStatus(true);
+      pushEvent('system', '🔗 Connected to Java app — receiving live Arduino data');
+      // Stop simulation when live
+      clearInterval(simInterval);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        handleJavaEvent(msg);
+      } catch(e) {
+        console.warn('Bad message from Java:', event.data);
+      }
+    };
+
+    ws.onclose = () => {
+      setConnectionStatus(false);
+      pushEvent('system', '⚠️ Java app disconnected — switching to simulation');
+      // Restart simulation as fallback
+      startSimulation();
+      // Try to reconnect every 5 seconds
+      setTimeout(connectWebSocket, 5000);
+    };
+
+    ws.onerror = () => {
+      // Will trigger onclose — simulation starts there
+    };
+
+  } catch(e) {
+    setConnectionStatus(false);
+    startSimulation();
+    setTimeout(connectWebSocket, 5000);
+  }
+}
+
+// ── HANDLE EVENTS FROM JAVA ───────────────────────────
+function handleJavaEvent(msg) {
+  switch(msg.type) {
+    case 'open':
+      doorOpen();
+      break;
+    case 'close':
+      doorClose();
+      break;
+    case 'locked':
+      setLockState(true);
+      break;
+    case 'unlocked':
+      setLockState(false);
+      break;
+    case 'alert':
+      const level = msg.level || 'medium';
+      const text  = msg.msg   || 'Alert';
+      pushAlert(level, '⚡ ' + text, 'Received from Java AlertManager');
+      break;
+    default:
+      pushEvent('system', msg.type || 'Unknown event');
+  }
+}
+
+// ── SIMULATION FALLBACK ───────────────────────────────
+// Runs when Java app is not connected
+const OPEN_PROBABILITY = 0.38;
+let simInterval = null;
+
+function simulatePoll() {
+  const signal = Math.random() < OPEN_PROBABILITY;
+  if (signal && !state.isDoorOpen)  doorOpen();
+  if (!signal && state.isDoorOpen)  doorClose();
+}
+
+function startSimulation() {
+  if (simInterval) clearInterval(simInterval);
+  simInterval = setInterval(simulatePoll, 4000);
+}
+
+// ── INIT ──────────────────────────────────────────────
+(function init() {
+  pushEvent('system', 'Smart Door Monitoring System started');
+  pushEvent('system', 'Connecting to Java app on ws://localhost:8887...');
+  renderChart();
+  document.getElementById('navTime').textContent = now();
+
+  // Try to connect to Java WebSocket server
+  // Falls back to simulation automatically if Java isn't running
+  connectWebSocket();
+
+  // Start simulation immediately as fallback
+  // connectWebSocket() will stop it if Java connects
+  startSimulation();
+})();
+</script>
+</body>
+</html>
